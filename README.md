@@ -1,27 +1,36 @@
-Welcome to Glitch
-=================
+# Server guardar archivos
+servidor que permite con peticiones get guardar archivos en carpetas
+y con post obtenerlos
 
-Click `Show` in the header to see your app live. Updates to your code will instantly deploy and update live.
+# GET
 
-**Glitch** is the friendly community where you'll build the app of your dreams. Glitch lets you instantly create, remix, edit, and host an app, bot or site, and you can invite collaborators or helpers to simultaneously edit code with you.
-
-Find out more [about Glitch](https://glitch.com/about).
-
-
-Your Project
-------------
-
-On the front-end,
-- edit `public/client.js`, `public/style.css` and `views/index.html`
-- drag in `assets`, like images or music, to add them to your project
-
-On the back-end,
-- your app starts at `server.js`
-- add frameworks and packages in `package.json`
-- safely store app secrets in `.env` (nobody can see this but you and people you invite)
+  formato curl
+```sh
+$ curl "http://ip:port/mision/nombreDeLaMision/archivo.extension"
+```
+ ejemplo
+ ```sh
+$ curl "http://localhost:8080/mision/misionDaniel/leon.jpg"
+```
 
 
-Made by [Glitch](https://glitch.com/)
--------------------
+esto devuelve:
+  - http code: 200 y el archivo.
+  - http code: 400 si el archivo no se encuentra
 
-\ ゜o゜)ノ
+# POST
+
+  formato curl
+```sh
+$ curl -F 'archivo=rutaArchivo' http://ip/mision/carpetadeLaMision
+```
+ ejemplo
+ ```sh
+$ curl curl -F 'archivo=@\Users\VRM\Pictures\leon.jpg' http://localhost:8080/mision/misionDaniel
+```
+
+
+esto devuelve:
+  - http code: 200 caso positivo (si no existe la carpeta de la mision se crea)
+  - http code: 400 si el archivo no se manda con la variable de nombre "archivo"
+  - http code:400 si el archivo excede el limte de mb establecidos
