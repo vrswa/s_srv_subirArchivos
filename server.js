@@ -12,11 +12,11 @@ app.get('/', function(request, response) {
   response.sendFile(__dirname + '/views/index.html');
 });
 
-//curl curl -F rutaArchivo http://ip/mision/carpetadeLaMision
+//curl curl -F 'archivo=rutaArchivo' http://ip/mision/carpetadeLaMision
 //curl -F 'archivo=@\Users\VRM\Pictures\leon.jpg' http://localhost:8080/mision/misionDaniel
 app.post('/mision/:carpeta',(req,res) => {
   if(!req.files.archivo){
-    res.sendStatus(400);
+    return res.sendStatus(400);
   }
   var miArchivo = req.files.archivo;
   var rutaCarpeta = `${__dirname}/mision/${req.params.carpeta}`;
@@ -34,6 +34,8 @@ app.post('/mision/:carpeta',(req,res) => {
   });
 });
 
+
+//curl "http://localhost:8080/mision/misionDaniel/leon.jpg"
 app.get('/mision/:carpeta/:archivo',(req,res) => {
   var carpeta = req.params.carpeta;
   var archivo = req.params.archivo;
