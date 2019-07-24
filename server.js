@@ -1,9 +1,15 @@
 const express = require('express');
 const fs = require('fs');
-const fileUpload = require('express-fileupload');
+var fileUpload = require('express-fileupload');
 const app = express();
-app.use(fileUpload());
 
+app.use(fileUpload({
+  abortOnLimit: true,
+  responseOnLimit: "excediste el limite",
+  limits: { 
+    fileSize: 50 * 1024 * 1024 //50MB max file(s) size
+  },
+}));
 // http://expressjs.com/en/starter/static-files.html
 app.use(express.static('public'));
 
@@ -15,6 +21,7 @@ app.get('/', function(request, response) {
 //curl -F 'archivo=rutaArchivo' http://ip/mision/carpetadeLaMision
 //curl -F 'archivo=@\Users\VRM\Pictures\leon.jpg' http://localhost:8080/mision/misionDaniel
 app.post('/mision/:carpeta',(req,res) => {
+  try{
   if(!req.files){
     return res.sendStatus(400);
   }
@@ -32,8 +39,10 @@ app.post('/mision/:carpeta',(req,res) => {
     if (err) return res.send(err);
   return res.status(200).send('archivo cargado');
   });
+  }catch (err) {
+    res.status(500).send(err);
+}
 });
-
 
 //curl "http://localhost:8080/mision/misionDaniel/leon.jpg"
 app.get('/mision/:carpeta/:archivo',(req,res) => {
@@ -46,8 +55,6 @@ app.get('/mision/:carpeta/:archivo',(req,res) => {
   res.status(200).sendFile(rutaArchivo);
 });
 
-
 const listener = app.listen(process.env.PORT, function() {
   console.log('Your app is listening on port ' + listener.address().port);
 });
-
