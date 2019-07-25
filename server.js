@@ -1,73 +1,122 @@
-const express = require('express');
-const fs = require('fs');
-var fileUpload = require('express-fileupload');
-const app = express();
 
+CfgDbBaseDir = `${__dirname}/mission/`; //A: las misiones que llegan se escriben aqui
+CfgUploadSzMax = 50 * 1024 * 1024; //A: 50MB max file(s) size 
+//----------------------------------------------------------
+var express = require('express');
+var fs = require('fs');
+var fileUpload = require('express-fileupload');
+var app = express();
+//----------------------------------------------------------
+//S: lib
+function leerJson(ruta){
+  return JSON.parse(fs.readFileSync(ruta));
+}
+
+//U: limpia extensiones de archivos no aceptadas, por aceptadas
+/*
+limpiarFname("../../esoy un path \\Malvado.exe");
+limpiarFname("TodoBien.json");
+limpiarFname("TodoCasiBien.Json");
+limpiarFname("Ok.mp3");
+*/
+function limpiarFname(fname) {
+  //var fnameYext= fname.match(/(.+?)\.(mp4|mp3|wav|png|jpg|json|txt)/) || ["",fname,"dat"];
+  var fnameYext= fname.match(/(.+?)\.(mp4|mp3|wav|png|jpg|json|txt)/) || ["",fname,"dat"];
+  //A: o tiene una extension aceptada, o le ponemos .dat
+  var fnameSinExt= fnameYext[1];
+  var fnameLimpio= fnameSinExt.replace(/[^a-z0-9_-]/gi,"_") + '.' + fnameYext[2];
+  //A: en el nombre si no es a-z A-Z 0-9 _ o - reemplazo por _ , y agrego extension aceptada
+  return fnameLimpio;
+}
+
+//U: devuelve la ruta a la carpeta o archivo si wantsCreate es true la crea sino null
+function rutaCarpeta(missionId,file,wantsCreate) {
+  //missionId = limpiarFname(missionId);
+  file = limpiarFname(file);
+
+  console.log("nombres limpios: " + missionId + file);
+
+  var rutaCarpeta = `${CfgDbBaseDir}/${missionId}`;
+  if (!fs.existsSync(rutaCarpeta) && wantsCreate){
+    fs.mkdirSync(rutaCarpeta);
+  }else{
+    return null;
+  }
+  //A:tenemos carpeta
+  if (file){
+    var rutaArchivo = `${rutaCarpeta}/${file}`;
+    return rutaArchivo;
+  }else{
+    return rutaCarpeta;
+  }
+  //TODO:SEC limpíar path (que no tenga .. exe js )
+}
+
+
+//----------------------------------------------------------
 app.use(fileUpload({
   abortOnLimit: true,
   responseOnLimit: "excediste el limite",
   limits: { 
-    fileSize: 50 * 1024 * 1024 //50MB max file(s) size
+    fileSize: CfgUploadSzMax
   },
 }));
-// http://expressjs.com/en/starter/static-files.html
+//VER:  http://expressjs.com/en/starter/basic-routing.html
+//VER:  http://expressjs.com/en/starter/static-files.html
 app.use(express.static('public'));
+app.use(express.static('files'));
 
-// http://expressjs.com/en/starter/basic-routing.html
-app.get('/', function(request, response) {
-  response.sendFile(__dirname + '/views/index.html');
-});
-
-//curl -F 'archivo=rutaArchivo' http://ip/mision/carpetadeLaMision
-//curl -F 'archivo=@\Users\VRM\Pictures\leon.jpg' http://localhost:8080/mision/misionDaniel
-app.post('/mision/:carpeta',(req,res) => {
+//nos envian via POST uno o varios archivos de una mission
+//U: curl -F 'file=rutaArchivo' http://ip/mission/carpetadeLaMision
+//U: curl -F 'file=@\Users\VRM\Pictures\leon.jpg' http://localhost:8080/mission/misionDaniel
+app.post('/mission/:missionId',(req,res) => {
   try{
-  if(!req.files){
-    return res.sendStatus(400);
-  }
-  var miArchivo = req.files.archivo;
-  var rutaCarpeta = `${__dirname}/mision/${req.params.carpeta}`;
-  var rutaArchivo = `${rutaCarpeta}/${miArchivo.name}`;
-  console.log(miArchivo.size / 1000000);
-  if (miArchivo.size / 1000000 >= 100) return  res.sendStatus(400);
-  
-  if (!fs.existsSync(rutaCarpeta) ){
-      fs.mkdirSync(rutaCarpeta);
-  }
-
-  miArchivo.mv(rutaArchivo,err => {
-    if (err) return res.send(err);
-  return res.status(200).send('archivo cargado');
-  });
+    if(!req.files){  return res.sendStatus(400); }
+    //A: sino me mandaron nigun file devolvi 400
+    var archivo = req.files.file;
+ 
+    var rutaArchivo = rutaCarpeta(req.params.missionId, archivo.name,true);
+    //A: ruta carpeta limpia path (que no tenga .. exe js )
+    //A : el tamaño maximo se controla con CfgUploadSzMax
+    console.log("mission upload: " + rutaArchivo + " " + archivo.size);
+    archivo.mv(rutaArchivo,err => {
+      if (err) return res.send(err);
+      return res.status(200).send('OK ' + archivo.size); //TODO: enviar tambien HASH
+    });
   }catch (err) {
     res.status(500).send(err);
-}
-});
-
-//curl "http://localhost:8080/mision/misionDaniel/leon.jpg"
-app.get('/mision/:carpeta/:archivo',(req,res) => {
-  var carpeta = req.params.carpeta;
-  var archivo = req.params.archivo;
-  var rutaArchivo = `${__dirname}/mision/${req.params.carpeta}/${req.params.archivo}`;
-  if (!fs.existsSync(rutaArchivo)){
-    res.sendStatus(404);
   }
-  res.status(200).sendFile(rutaArchivo);
 });
 
-app.get('/mision',(req,res) => {
-  var vector = new Array();
-  var rutaCarpeta = `${__dirname}/mision`;
 
-  fs.readdir(rutaCarpeta, function(err, carpetas) {
+//U: mediante GET se pide un archivo especifico de una mision especifica
+//curl "http://localhost:8080/mission/misionDaniel/leon.jpg"
+app.get('/mission/:missionId/:file',(req,res) => {
+  //var missionId = req.params.missionId;
+  var archivo = req.params.file;
+  //console.log(fs.existsSync(console.log(CfgDbBaseDir + '/' + missionId + '/'+ archivo)));
+  var rutaArchivo = rutaCarpeta(missionId, archivo,false);
+  console.log("llegaste bien " + rutaArchivo);
+  if (fs.existsSync(rutaArchivo)){
+    res.status(200).sendFile(rutaArchivo);
+  }else{
+    res.status(404);
+  }
+});
+
+//U: mediante GET se piden los index.json de todas las misiones
+app.get('/mission',(req,res) => {
+  var vector = new Array();
+
+  fs.readdir(CfgDbBaseDir, function(err, carpetas) {
     for (var i=0; i<carpetas.length; i++) {
-      var rutaArchivo = `${rutaCarpeta}/${carpetas[i]}/index.json`;
+      var rutaArchivo = `${CfgDbBaseDir}/${carpetas[i]}/index.json`;
       if (fs.existsSync(rutaArchivo)) {
         vector.push(leerJson(rutaArchivo));
       }  
       rutaArchivo="";
     }
-    return resstatus(200).send(vector);
+    return res.status(200).send(vector);
   });
 })
 
@@ -76,8 +125,3 @@ const listener = app.listen(process.env.PORT, function() {
   console.log('Your app is listening on port ' + listener.address().port);
 });
 
-
-
-function leerJson(ruta){
-  return JSON.parse(fs.readFileSync(ruta));
-}
