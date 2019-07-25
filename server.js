@@ -67,7 +67,7 @@ app.get('/mision',(req,res) => {
       }  
       rutaArchivo="";
     }
-    return res.send(vector);
+    return resstatus(200).send(vector);
   });
 })
 

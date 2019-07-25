@@ -2,7 +2,23 @@
 servidor que permite con peticiones get guardar archivos en carpetas
 y con post obtenerlos
 
-# GET
+# GET /mision
+
+  formato curl
+```sh
+$ curl "http://ip:port/mision"
+```
+ ejemplo
+ ```sh
+$ curl "http://localhost:8080/mision"
+```
+
+
+esto devuelve:
+  - http code: 200 y un array de json.
+
+
+# GET /mision/nombreMision/archivo
 
   formato curl
 ```sh
