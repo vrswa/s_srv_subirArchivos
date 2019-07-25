@@ -55,6 +55,29 @@ app.get('/mision/:carpeta/:archivo',(req,res) => {
   res.status(200).sendFile(rutaArchivo);
 });
 
+app.get('/mision',(req,res) => {
+  var vector = new Array();
+  var rutaCarpeta = `${__dirname}/mision`;
+
+  fs.readdir(rutaCarpeta, function(err, carpetas) {
+    for (var i=0; i<carpetas.length; i++) {
+      var rutaArchivo = `${rutaCarpeta}/${carpetas[i]}/index.json`;
+      if (fs.existsSync(rutaArchivo)) {
+        vector.push(leerJson(rutaArchivo));
+      }  
+      rutaArchivo="";
+    }
+    return res.send(vector);
+  });
+})
+
+
 const listener = app.listen(process.env.PORT, function() {
   console.log('Your app is listening on port ' + listener.address().port);
 });
+
+
+
+function leerJson(ruta){
+  return JSON.parse(fs.readFileSync(ruta));
+}
