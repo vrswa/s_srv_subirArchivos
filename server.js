@@ -1,5 +1,5 @@
 
-CfgDbBaseDir = `${__dirname}/mission/`; //A: las misiones que llegan se escriben aqui
+CfgDbBaseDir = `${__dirname}/mission`; //A: las misiones que llegan se escriben aqui
 CfgUploadSzMax = 50 * 1024 * 1024; //A: 50MB max file(s) size 
 //----------------------------------------------------------
 var express = require('express');
@@ -19,44 +19,53 @@ limpiarFname("TodoBien.json");
 limpiarFname("TodoCasiBien.Json");
 limpiarFname("Ok.mp3");
 */
-function limpiarFname(fname) {
-  //var fnameYext= fname.match(/(.+?)\.(mp4|mp3|wav|png|jpg|json|txt)/) || ["",fname,"dat"];
-  var fnameYext= fname.match(/(.+?)\.(mp4|mp3|wav|png|jpg|json|txt)/) || ["",fname,"dat"];
-  //A: o tiene una extension aceptada, o le ponemos .dat
+function limpiarFname(fname, dfltExt) {
+  var fnameYext= fname.match(/(.+?)(\.(mp4|mp3|wav|png|jpg|json|txt))/) || ["",fname, dfltExt||""];
+  //A: o tiene una extension aceptada, o le ponemos dfltExt o ""
   var fnameSinExt= fnameYext[1];
-  var fnameLimpio= fnameSinExt.replace(/[^a-z0-9_-]/gi,"_") + '.' + fnameYext[2];
+  var fnameLimpio= fnameSinExt.replace(/[^a-z0-9_-]/gi,"_") + fnameYext[2];
   //A: en el nombre si no es a-z A-Z 0-9 _ o - reemplazo por _ , y agrego extension aceptada
   return fnameLimpio;
 }
 
 //U: devuelve la ruta a la carpeta o archivo si wantsCreate es true la crea sino null
 function rutaCarpeta(missionId,file,wantsCreate) {
-  //missionId = limpiarFname(missionId);
-  file = limpiarFname(file);
+  missionId = limpiarFname(missionId||"_0SinMision_");
+  file = file!=null && limpiarFname(file,".dat");
 
-  console.log("nombres limpios: " + missionId + file);
+  console.log("nombres limpios: " + missionId + ' ' + file);
 
   var rutaCarpeta = `${CfgDbBaseDir}/${missionId}`;
-  if (!fs.existsSync(rutaCarpeta) && wantsCreate){
-    fs.mkdirSync(rutaCarpeta);
-  }else{
-    return null;
-  }
+  if (!fs.existsSync(rutaCarpeta)) { 
+		if (wantsCreate){
+    	fs.mkdirSync(rutaCarpeta);
+		}else{
+			return null;
+		}
+	}
   //A:tenemos carpeta
+
   if (file){
     var rutaArchivo = `${rutaCarpeta}/${file}`;
     return rutaArchivo;
   }else{
     return rutaCarpeta;
   }
-  //TODO:SEC limpíar path (que no tenga .. exe js )
 }
-
+/* TESTS
+console.log(rutaCarpeta("t_rutaCarpeta_ok",null,true))
+console.log(rutaCarpeta("t_rutaCarpeta_ok","arch1",true))
+console.log(rutaCarpeta("t_rutaCarpeta2_ok","arch2",true))
+console.log(rutaCarpeta("t_rutaCarpeta2_ok","Malvado1.exe",true)) //A: no pasa exe
+console.log(rutaCarpeta("t_rutaCarpeta2_ok","/root/passwd",true)) //A: no pasa /
+console.log(rutaCarpeta("../../t_rutaCarpeta_dirUp_MAL","index.json",true)) //A: no pasa ../
+console.log(rutaCarpeta("/t_rutaCarpeta_root_MAL","index.json",true)) //A: no pasa /
+*/
 
 //----------------------------------------------------------
 app.use(fileUpload({
   abortOnLimit: true,
-  responseOnLimit: "excediste el limite",
+  responseOnLimit: "ERROR: Size Max "+CfgUploadSzMax,
   limits: { 
     fileSize: CfgUploadSzMax
   },
